@@ -67,3 +67,16 @@ stop and ask instead of working around it.
   so this repo does not depend on securepay-generator.
 - `extracts_report.json` is the answer key of the reconciliation; keep its
   format stable.
+
+## Where to read more
+
+Read these before changing the design, not to work on the code:
+
+- Architecture overview: https://securepay-riwi.github.io/SecurePay/docs/architecture/overview
+- Decisions (ADRs): https://securepay-riwi.github.io/SecurePay/docs/architecture/decisions
+- Team decisions: https://securepay-riwi.github.io/SecurePay/docs/architecture/team-decisions
+- Open questions: https://securepay-riwi.github.io/SecurePay/docs/architecture/open-questions
+- Data flow: https://securepay-riwi.github.io/SecurePay/docs/architecture/data-flow
+- Logbook: https://securepay-riwi.github.io/SecurePay/docs/logbook
+- Kaggle datasets: https://securepay-riwi.github.io/SecurePay/docs/components/kaggle-datasets
+- Partner statements: https://securepay-riwi.github.io/SecurePay/docs/components/partner-statements
