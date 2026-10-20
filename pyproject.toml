@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "securepay-csv"
+version = "0.1.0"
+description = "CSV data sources for SecurePay: Kaggle datasets and partner statements"
+requires-python = ">=3.12"
+dependencies = [
+    "securepay-shared>=0.1.0",
+    "kaggle>=2.2.4",
+    "python-dotenv>=1.2.4",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["kaggle", "partner_statements"]
