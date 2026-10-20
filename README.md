@@ -2,17 +2,17 @@
 
 CSV data sources for the SecurePay Antifraude project.
 
-## Sources
+## Data sources
 
-| ID | Source | Format | Frequency |
-|----|--------|--------|-----------|
-| F1 | PaySim — Synthetic Financial Datasets For Fraud Detection | CSV Kaggle | Historical |
-| F2 | Sparkov — Credit Card Fraud Detection (`fraudTest.csv`) | CSV Kaggle | Historical |
-| F5 | Partner payment statements (banks / correspondents) | CSV/TXT fixed-width | Daily |
+| ID | Source | Type |
+|----|--------|------|
+| F1 | PaySim — synthetic financial transactions | CSV from Kaggle (`ealaxi/paysim1`) |
+| F2 | Sparkov fraudTest — labeled card fraud transactions | CSV from Kaggle (`kartik2112/fraud-detection`) |
+| F5 | Partner payment statements | Fixed-width TXT / CSV generated locally |
 
-> **Note:** F2 originally used `mlg-ulb/creditcardfraud`. The team replaced it with
-> `kartik2112/fraud-detection` (`fraudTest.csv`) after agreement with the professor,
-> because the anonymous V1..V28 columns of the original dataset cannot support real antifraud rules.
+> **F2 note:** The original project spec listed `mlg-ulb/creditcardfraud` (`creditcard.csv`).
+> The team replaced it with `kartik2112/fraud-detection` (`fraudTest.csv`) after agreement
+> with the professor — the anonymous V1..V28 columns cannot support real antifraud rules.
 
 ## Setup
 
@@ -20,20 +20,33 @@ CSV data sources for the SecurePay Antifraude project.
 git clone https://github.com/SecurePay-Riwi/securepay-csv.git
 cd securepay-csv
 cp .env.example .env   # fill in your credentials
-uv sync
+uv sync                # installs securepay-shared from PyPI automatically
 ```
+
+## Required CSV files
+
+The Kaggle CSVs are large and are **not committed to Git**. Download them and place
+them in `data/kaggle/`:
+
+| File | Kaggle dataset | Size |
+|------|----------------|------|
+| `PS_20174392719_1491204439457_log.csv` | [ealaxi/paysim1](https://www.kaggle.com/datasets/ealaxi/paysim1) | ~470 MB |
+| `fraudTest.csv` | [kartik2112/fraud-detection](https://www.kaggle.com/datasets/kartik2112/fraud-detection) | ~150 MB |
 
 ## Usage
 
 ```bash
-# Download and load Kaggle datasets
-uv run python -m kaggle.download
-uv run python -m kaggle.load
+# Upload PaySim and fraudTest to the Data Lake (LocalStack)
+uv run python -m sources.csv_files.kaggle
 
-# Process partner statements
-uv run python -m partner_statements.process
+# Generate partner payment statements
+uv run python -m sources.csv_files.partner_statements
+
+# Run tests (no internet or real CSVs needed)
+uv run pytest
 ```
 
 ## Dependencies
 
 - [`securepay-shared`](https://pypi.org/project/securepay-shared/) — shared models, DB and config
+- LocalStack running locally for S3 upload steps (see monorepo `infra/`)
