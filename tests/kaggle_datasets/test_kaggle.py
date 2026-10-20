@@ -14,10 +14,10 @@ from uuid import uuid4
 import pytest
 from botocore.exceptions import ClientError
 
-from shared.aws import cliente
-from sources.csv_files.kaggle import config
-from sources.csv_files.kaggle.download import asegurar_descargado
-from sources.csv_files.kaggle.upload import (
+from securepay_shared.aws import get_client
+from securepay_csv.kaggle_datasets import config
+from securepay_csv.kaggle_datasets.download import asegurar_descargado
+from securepay_csv.kaggle_datasets.upload import (
     SUBIDO,
     YA_CARGADO,
     ErrorValidacion,
@@ -332,7 +332,7 @@ def test_force_download_redownloads(tmp_path, monkeypatch):
 
 
 def test_download_without_token_fails_clearly(tmp_path, monkeypatch):
-    from sources.csv_files.kaggle.download import descargar
+    from securepay_csv.kaggle_datasets.download import descargar
 
     monkeypatch.delenv("KAGGLE_API_TOKEN", raising=False)
     with pytest.raises(RuntimeError, match="KAGGLE_API_TOKEN"):
@@ -354,7 +354,7 @@ def test_config_reads_environment(monkeypatch):
 @pytest.fixture
 def s3_localstack():
     try:
-        s3 = cliente("s3")
+        s3 = get_client("s3")
         s3.head_bucket(Bucket=config.bucket())
     except Exception:
         pytest.skip("LocalStack no está disponible (docker compose up -d)")

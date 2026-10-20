@@ -1,6 +1,6 @@
 """Punto de entrada de la carga de los datasets de Kaggle.
 
-    uv run python -m sources.csv_files.kaggle
+    uv run python -m securepay_csv.kaggle_datasets
 
 Para cada dataset: descarga (si no está en KAGGLE_DOWNLOAD_DIR), valida
 encabezado y número de filas, y lo sube a raw/kaggle/ del Data Lake con su
@@ -11,17 +11,17 @@ comando termina con código 1.
 
 import sys
 
-from shared.aws import cliente
-from sources.csv_files.kaggle import config
-from sources.csv_files.kaggle.download import asegurar_descargado
-from sources.csv_files.kaggle.upload import subir
+from securepay_shared.aws import get_client
+from securepay_csv.kaggle_datasets import config
+from securepay_csv.kaggle_datasets.download import asegurar_descargado
+from securepay_csv.kaggle_datasets.upload import subir
 
 
 def main() -> int:
     carpeta = config.carpeta_descarga()
     bucket = config.bucket()
     # Archivos grandes: más tiempo de lectura que el de por defecto.
-    s3 = cliente("s3", read_timeout=60)
+    s3 = get_client("s3", read_timeout=60)
 
     resultados, errores = [], []
     for ds in config.DATASETS:

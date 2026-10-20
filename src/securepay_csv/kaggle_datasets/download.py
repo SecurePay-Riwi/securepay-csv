@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 
-from sources.csv_files.kaggle.config import Dataset, forzar_descarga
+from securepay_csv.kaggle_datasets.config import Dataset, forzar_descarga
 
 
 def descargar(dataset: str, carpeta: Path, forzar: bool = False) -> None:

@@ -12,7 +12,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-import shared.config  # noqa: F401 (carga el .env con load_dotenv)
+import securepay_shared.config  # noqa: F401 (carga el .env con load_dotenv)
 
 # Por defecto, el valor local de LocalStack (guía, sección de rutas en S3).
 BUCKET_POR_DEFECTO = "pagoseguro-datalake"

@@ -1,23 +1,23 @@
 """Punto de entrada del generador de extractos de los socios.
 
-    uv run python -m sources.csv_files.partner_statements
+    uv run python -m securepay_csv.partner_statements
 
 Lee la salida del generador de transacciones (corre primero
-`uv run python -m generators`), arma un archivo por socio y por día con
+`uv run python -m securepay_generator`), arma un archivo por socio y por día con
 sus defectos, y los deja en generated/extractos/ y, con EXT_OUTPUT=s3,
 también en la capa raw del Data Lake.
 """
 
 from collections import Counter
 
-from sources.csv_files.partner_statements import config
-from sources.csv_files.partner_statements.output import (
+from securepay_csv.partner_statements import config
+from securepay_csv.partner_statements.output import (
     SalidaLocal,
     SalidaS3,
     ruta_relativa,
 )
-from sources.csv_files.partner_statements.reader import leer
-from sources.csv_files.partner_statements.statements import Generador, Porcentajes
+from securepay_csv.partner_statements.reader import leer
+from securepay_csv.partner_statements.statements import Generador, Porcentajes
 
 
 def main():

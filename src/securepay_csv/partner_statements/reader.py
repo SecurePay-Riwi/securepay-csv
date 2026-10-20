@@ -19,7 +19,7 @@ from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 
-from sources.csv_files.partner_statements.money import redondear
+from securepay_csv.partner_statements.money import redondear
 
 # Lo que ve algún socio. Las P2P no salen de la billetera.
 TIPOS_CON_SOCIO = {"RECARGA", "RETIRO", "QR"}
@@ -64,7 +64,7 @@ def leer(base: Path) -> list[Operacion]:
     if not carpetas:
         raise FileNotFoundError(
             f"No hay salida del generador en {base}. Corre primero: "
-            "uv run python -m generators"
+            "uv run python -m securepay_generator"
         )
 
     operaciones = {}
