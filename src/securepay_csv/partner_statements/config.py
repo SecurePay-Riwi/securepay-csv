@@ -14,9 +14,26 @@ load_dotenv()
 
 SEED = int(os.getenv("SEED", 42))
 
-# De dónde lee: la carpeta del generador de transacciones (todas sus
-# instancias, generated/instance-*/).
-INPUT_DIR = Path(os.getenv("EXT_INPUT_DIR", os.getenv("GEN_OUTPUT_DIR", "generated")))
+# De dónde lee: la salida del generador de transacciones (todas sus
+# instancias, generated/instance-*/). El generador vive en otro repo, así que
+# sin variable se busca primero aquí y después en el clon vecino
+# ../securepay-generator, que es como se clonan los repos (uno al lado del otro).
+CARPETAS_ENTRADA = (Path("generated"), Path("../securepay-generator/generated"))
+
+
+def carpeta_entrada(candidatas=CARPETAS_ENTRADA) -> Path:
+    """EXT_INPUT_DIR si está; si no, la primera candidata con salida del
+    generador; si ninguna la tiene, la primera, para que el error la nombre."""
+    explicita = os.getenv("EXT_INPUT_DIR") or os.getenv("GEN_OUTPUT_DIR")
+    if explicita:
+        return Path(explicita)
+    for carpeta in candidatas:
+        if any(carpeta.glob("instance-*")):
+            return carpeta
+    return candidatas[0]
+
+
+INPUT_DIR = carpeta_entrada()
 
 # "file": deja los extractos solo en EXT_OUTPUT_DIR.
 # "s3": además los sube a la capa raw del Data Lake (LocalStack en local).

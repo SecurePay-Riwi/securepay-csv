@@ -44,9 +44,9 @@ class SalidaLocal:
 class SalidaS3:
     def __init__(self, bucket: str, prefijo: str):
         # Import aquí: el modo file no necesita boto3 ni LocalStack.
-        from shared.aws import cliente
+        from securepay_shared.aws import get_client
 
-        self.s3 = cliente("s3", read_timeout=10)
+        self.s3 = get_client("s3", read_timeout=10)
         self.bucket = bucket
         self.prefijo = prefijo
 

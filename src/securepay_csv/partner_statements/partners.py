@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
-from sources.csv_files.partner_statements.money import paso
+from securepay_csv.partner_statements.money import paso
 
 # Bogotá es UTC-5 todo el año (sin horario de verano desde 1993). Se usa
 # un desfase fijo en vez de ZoneInfo("America/Bogota") porque en Windows

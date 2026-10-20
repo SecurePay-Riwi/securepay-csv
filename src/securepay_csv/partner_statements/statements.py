@@ -25,8 +25,8 @@ from dataclasses import dataclass, replace
 from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
-from sources.csv_files.partner_statements.money import paso
-from sources.csv_files.partner_statements.partners import SOCIOS, Extracto, Registro
+from securepay_csv.partner_statements.money import paso
+from securepay_csv.partner_statements.partners import SOCIOS, Extracto, Registro
 
 NAMESPACE = uuid.UUID("5e1f2c3d-4b5a-6978-8a9b-0c1d2e3f4a5b")
 TOLERANCIA = Decimal("0.01")

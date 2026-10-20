@@ -7,9 +7,9 @@ from decimal import Decimal
 
 import pytest
 
-from sources.csv_files.partner_statements.money import redondear
-from sources.csv_files.partner_statements.output import SalidaLocal, ruta_relativa
-from sources.csv_files.partner_statements.partners import (
+from securepay_csv.partner_statements.money import redondear
+from securepay_csv.partner_statements.output import SalidaLocal, ruta_relativa
+from securepay_csv.partner_statements.partners import (
     SOCIOS,
     BancoAndino,
     Extracto,
@@ -17,8 +17,8 @@ from sources.csv_files.partner_statements.partners import (
     Registro,
     socio_de,
 )
-from sources.csv_files.partner_statements.reader import Operacion, leer
-from sources.csv_files.partner_statements.statements import (
+from securepay_csv.partner_statements.reader import Operacion, leer
+from securepay_csv.partner_statements.statements import (
     DIFERENCIA_MONTO,
     FALTANTE_EN_PAGOSEGURO,
     FALTANTE_EN_SOCIO,
@@ -162,7 +162,7 @@ def test_lee_solo_lo_que_ve_un_socio(tmp_path):
 
 
 def test_sin_salida_del_generador_avisa(tmp_path):
-    with pytest.raises(FileNotFoundError, match="generators"):
+    with pytest.raises(FileNotFoundError, match="securepay_generator"):
         leer(tmp_path)
 
 
@@ -270,8 +270,8 @@ def test_sube_a_la_capa_raw(monkeypatch):
         def put_object(self, **kwargs):
             subidos.append(kwargs)
 
-    monkeypatch.setattr("shared.aws.cliente", lambda *a, **k: S3Falso())
-    from sources.csv_files.partner_statements.output import SalidaS3
+    monkeypatch.setattr("securepay_shared.aws.get_client", lambda *a, **k: S3Falso())
+    from securepay_csv.partner_statements.output import SalidaS3
 
     SalidaS3("pagoseguro-datalake", "raw/extractos").guardar(
         "qr_pagos/fecha=2026-10-01/qr_pagos_20261001_v1.txt", "#CTRL|2026-10-01|0|0\n"

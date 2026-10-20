@@ -1,39 +1,91 @@
 # securepay-csv
 
-CSV data sources for the SecurePay Antifraude project.
+File sources for the SecurePay Antifraude project.
 
-## Sources
+| Source | Type |
+|--------|------|
+| PaySim, synthetic mobile money transactions | CSV from Kaggle (`ealaxi/paysim1`) |
+| Sparkov fraudTest, labeled card transactions | CSV from Kaggle (`kartik2112/fraud-detection`) |
+| Daily partner statements (4 payment partners) | CSV / fixed-width TXT generated locally |
 
-| ID | Source | Format | Frequency |
-|----|--------|--------|-----------|
-| F1 | PaySim — Synthetic Financial Datasets For Fraud Detection | CSV Kaggle | Historical |
-| F2 | Sparkov — Credit Card Fraud Detection (`fraudTest.csv`) | CSV Kaggle | Historical |
-| F5 | Partner payment statements (banks / correspondents) | CSV/TXT fixed-width | Daily |
-
-> **Note:** F2 originally used `mlg-ulb/creditcardfraud`. The team replaced it with
-> `kartik2112/fraud-detection` (`fraudTest.csv`) after agreement with the professor,
-> because the anonymous V1..V28 columns of the original dataset cannot support real antifraud rules.
+> The original project spec listed `mlg-ulb/creditcardfraud` (`creditcard.csv`).
+> The team replaced it with `kartik2112/fraud-detection` after agreeing with the
+> professor: the anonymous V1..V28 columns cannot support real antifraud rules.
 
 ## Setup
 
 ```bash
 git clone https://github.com/SecurePay-Riwi/securepay-csv.git
 cd securepay-csv
-cp .env.example .env   # fill in your credentials
-uv sync
+cp .env.example .env   # set KAGGLE_API_TOKEN
+uv sync                # installs securepay-shared from PyPI
 ```
+
+## Local services
+
+PostgreSQL (port 5433) and LocalStack run with the Docker Compose of the
+[SecurePay](https://github.com/SecurePay-Riwi/SecurePay) repository (`docker compose up -d`).
+LocalStack is needed to upload to the Data Lake (`EXT_OUTPUT=s3` and the Kaggle upload).
 
 ## Usage
 
 ```bash
-# Download and load Kaggle datasets
-uv run python -m kaggle.download
-uv run python -m kaggle.load
+# Download PaySim and fraudTest from Kaggle and upload them to the Data Lake
+uv run python -m securepay_csv.kaggle_datasets
 
-# Process partner statements
-uv run python -m partner_statements.process
+# Build the daily partner statements from the generator output
+uv run python -m securepay_csv.partner_statements
+
+# Run the tests (no internet or real CSVs needed)
+uv run pytest
 ```
 
-## Dependencies
+### Kaggle datasets
 
-- [`securepay-shared`](https://pypi.org/project/securepay-shared/) — shared models, DB and config
+The CSVs are large and are **never committed**. They are downloaded to
+`data/kaggle/` (`KAGGLE_DOWNLOAD_DIR`, Git-ignored) and uploaded to
+`raw/kaggle/` in the Data Lake bucket. **securepay-seed** reads the same folder
+when it is cloned next to this repository.
+
+| File | Kaggle dataset | Size |
+|------|----------------|------|
+| `PS_20174392719_1491204439457_log.csv` | [ealaxi/paysim1](https://www.kaggle.com/datasets/ealaxi/paysim1) | ~470 MB |
+| `fraudTest.csv` | [kartik2112/fraud-detection](https://www.kaggle.com/datasets/kartik2112/fraud-detection) | ~150 MB |
+
+### Partner statements
+
+They are built from the generator output (`generated/instance-*/events.jsonl`),
+looked up here and in `../securepay-generator/generated/`, so they match what
+the engine saw. Each partner sends one file per day in its own format, with the
+defects the spec asks for. The files go to `generated/extractos/`, together with
+`extracts_report.json`, the answer key for the reconciliation.
+
+## Repository layout
+
+```
+src/securepay_csv/
+├── kaggle_datasets/      # Kaggle download + upload: python -m securepay_csv.kaggle_datasets
+└── partner_statements/   # daily statements: python -m securepay_csv.partner_statements
+tests/
+├── kaggle_datasets/
+└── partner_statements/
+```
+
+All code lives in one package under `src/`; tests mirror it under `tests/`.
+Read [AGENTS.md](AGENTS.md) before adding folders or modules.
+
+## Working with the other repositories
+
+The repositories pass data through files (and through S3 in AWS), never through
+imports. Clone them side by side in the same folder and each one finds the files
+the others produce, without setting paths by hand:
+
+```
+SecurePay-Riwi/
+├── securepay-seed/        # PostgreSQL master data + restricted list export
+├── securepay-generator/   # reads the seed, writes generated/instance-*/
+├── securepay-csv/         # Kaggle downloads + partner statements (reads the generator)
+└── securepay-apis/        # restricted-list service (reads the seed export)
+```
+
+Environment variables still override every path (see `.env.example`).

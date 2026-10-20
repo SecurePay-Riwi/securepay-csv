@@ -16,7 +16,7 @@ from pathlib import Path
 
 from botocore.exceptions import ClientError
 
-from sources.csv_files.kaggle.config import Dataset
+from securepay_csv.kaggle_datasets.config import Dataset
 
 SUBIDO = "subido"
 YA_CARGADO = "ya cargado"
