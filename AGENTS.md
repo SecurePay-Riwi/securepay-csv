@@ -80,3 +80,12 @@ Read these before changing the design, not to work on the code:
 - Logbook: https://securepay-riwi.github.io/SecurePay/docs/logbook
 - Kaggle datasets: https://securepay-riwi.github.io/SecurePay/docs/components/kaggle-datasets
 - Partner statements: https://securepay-riwi.github.io/SecurePay/docs/components/partner-statements
+
+
+## Docker image
+
+- The root `Dockerfile` runs partner statements by default and supports the
+  Kaggle ingestion module when its command is overridden.
+- Generated output and Kaggle downloads must use writable volumes; never bake
+  user-generated data or credentials into an image.
+- Update README when entry points or Docker runtime requirements change.

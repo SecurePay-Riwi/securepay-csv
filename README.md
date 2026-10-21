@@ -89,3 +89,17 @@ SecurePay-Riwi/
 ```
 
 Environment variables still override every path (see `.env.example`).
+
+
+## Docker
+
+Build the Python 3.12 image with uv from this repository root:
+
+```bash
+docker build -t securepay-csv .
+```
+
+Mount generator output at `/app/generated` and set `EXT_INPUT_DIR=/app/generated`.
+The default command builds partner statements. For optional Kaggle ingestion,
+override it with `python -m securepay_csv.kaggle_datasets` and provide
+`KAGGLE_API_TOKEN`.
