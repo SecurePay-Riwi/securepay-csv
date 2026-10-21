@@ -80,3 +80,10 @@ Read these before changing the design, not to work on the code:
 - Logbook: https://securepay-riwi.github.io/SecurePay/docs/logbook
 - Kaggle datasets: https://securepay-riwi.github.io/SecurePay/docs/components/kaggle-datasets
 - Partner statements: https://securepay-riwi.github.io/SecurePay/docs/components/partner-statements
+
+
+## Docker image (MAG-31)
+
+- The root `Dockerfile` uses Python 3.12 and `uv`; keep `uv.lock` synchronized with project dependencies.
+- Never commit `.env`, credentials, downloaded Kaggle datasets, or generated statements.
+- The full ecosystem is orchestrated from the `SecurePay` repository.
