@@ -89,3 +89,15 @@ SecurePay-Riwi/
 ```
 
 Environment variables still override every path (see `.env.example`).
+
+
+## Docker image (MAG-31)
+
+Build the Python 3.12/uv image from this repository root. It installs locked production dependencies and runs partner-statement generation by default.
+
+```bash
+docker build -t securepay-csv .
+docker run --rm --env-file .env securepay-csv
+```
+
+For the complete local environment, use Docker Compose in the `SecurePay` repository. It configures the shared generated-data volume and LocalStack access. Kaggle downloads are optional and require `KAGGLE_API_TOKEN`.
