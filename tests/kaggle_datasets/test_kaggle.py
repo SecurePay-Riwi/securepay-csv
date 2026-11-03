@@ -9,6 +9,7 @@ sola si no está levantado.
 import hashlib
 import json
 from dataclasses import replace
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -343,9 +344,9 @@ def test_config_reads_environment(monkeypatch):
     monkeypatch.setenv("DATALAKE_BUCKET", "otro-bucket")
     monkeypatch.setenv("KAGGLE_DOWNLOAD_DIR", "otra/carpeta")
     assert config.bucket() == "otro-bucket"
-    assert str(config.carpeta_descarga()) == "otra/carpeta"
+    assert config.carpeta_descarga() == Path("otra/carpeta")
     monkeypatch.delenv("KAGGLE_DOWNLOAD_DIR")
-    assert str(config.carpeta_descarga()) == "data/kaggle"
+    assert config.carpeta_descarga() == Path("data/kaggle")
 
 
 # --- Integración con LocalStack (se salta sola si no está levantado) -------
