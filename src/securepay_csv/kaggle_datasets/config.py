@@ -112,4 +112,10 @@ def carpeta_descarga() -> Path:
 
 
 def forzar_descarga() -> bool:
-    return os.getenv("KAGGLE_FORCE_DOWNLOAD", "").strip().lower() in {"1", "true", "yes", "si", "sí"}
+    return os.getenv("KAGGLE_FORCE_DOWNLOAD", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "si",
+        "sí",
+    }

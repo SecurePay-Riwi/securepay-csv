@@ -11,7 +11,7 @@ import csv
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from botocore.exceptions import ClientError
@@ -66,8 +66,10 @@ def validar(ds: Dataset, ruta: Path) -> tuple[list[str], int, str]:
     if columnas != esperadas:
         faltan = [c for c in esperadas if c not in columnas]
         sobran = [c for c in columnas if c not in esperadas]
-        detalle = "mismas columnas pero en otro orden" if not faltan and not sobran else (
-            f"faltan {faltan}, sobran {sobran}"
+        detalle = (
+            "mismas columnas pero en otro orden"
+            if not faltan and not sobran
+            else (f"faltan {faltan}, sobran {sobran}")
         )
         raise ErrorValidacion(
             f"{ds.clave}: el encabezado de {ruta.name} no coincide con el contrato ({detalle})"
@@ -91,12 +93,16 @@ def construir_manifiesto(
         "columnas": columnas,
         "sha256": sha256,
         "bytes": tamano,
-        "cargado_en": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "cargado_en": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
 
 
 def _no_existe(error: ClientError) -> bool:
-    return error.response.get("Error", {}).get("Code") in {"NoSuchKey", "404", "NotFound"}
+    return error.response.get("Error", {}).get("Code") in {
+        "NoSuchKey",
+        "404",
+        "NotFound",
+    }
 
 
 def leer_manifiesto_remoto(s3, bucket: str, clave: str) -> dict | None:

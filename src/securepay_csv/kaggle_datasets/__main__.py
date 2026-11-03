@@ -12,6 +12,7 @@ comando termina con código 1.
 import sys
 
 from securepay_shared.aws import get_client
+
 from securepay_csv.kaggle_datasets import config
 from securepay_csv.kaggle_datasets.download import asegurar_descargado
 from securepay_csv.kaggle_datasets.upload import subir
@@ -36,7 +37,9 @@ def main() -> int:
 
     print("\nResumen")
     for r in resultados:
-        print(f"  {r.dataset:<11} {r.filas:>9} filas  {r.bytes / 1024 / 1024:>8.1f} MB  {r.estado}")
+        print(
+            f"  {r.dataset:<11} {r.filas:>9} filas  {r.bytes / 1024 / 1024:>8.1f} MB  {r.estado}"
+        )
     for clave, e in errores:
         print(f"  {clave:<11} FALLÓ: {e}")
 

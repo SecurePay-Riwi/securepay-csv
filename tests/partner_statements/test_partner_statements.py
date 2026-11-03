@@ -2,7 +2,7 @@
 
 import json
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -27,11 +27,22 @@ from securepay_csv.partner_statements.statements import (
     Porcentajes,
 )
 
-INICIO = datetime(2026, 10, 1, tzinfo=timezone.utc)
+INICIO = datetime(2026, 10, 1, tzinfo=UTC)
 # Tipo y canal de las operaciones que ve algún socio.
-CAMINOS = [("RECARGA", "APP"), ("RECARGA", "WEB"), ("RECARGA", "CORRESPONSAL"),
-           ("RETIRO", "CORRESPONSAL"), ("RETIRO", "CAJERO"), ("QR", "APP")]
-MONTOS = {"COP": (1_000, 2_000_000), "USD": (1, 500), "EUR": (1, 500), "JPY": (100, 70_000)}
+CAMINOS = [
+    ("RECARGA", "APP"),
+    ("RECARGA", "WEB"),
+    ("RECARGA", "CORRESPONSAL"),
+    ("RETIRO", "CORRESPONSAL"),
+    ("RETIRO", "CAJERO"),
+    ("QR", "APP"),
+]
+MONTOS = {
+    "COP": (1_000, 2_000_000),
+    "USD": (1, 500),
+    "EUR": (1, 500),
+    "JPY": (100, 70_000),
+}
 
 
 def operaciones(n=2_000, dias=5, semilla=1):
@@ -40,12 +51,17 @@ def operaciones(n=2_000, dias=5, semilla=1):
     for i in range(n):
         tipo, canal = rng.choice(CAMINOS)
         moneda = rng.choice(list(MONTOS))
-        ops.append(Operacion(
-            id=f"tx-{i:05d}", tipo=tipo, canal=canal, moneda=moneda,
-            monto=redondear(Decimal(str(rng.uniform(*MONTOS[moneda]))), moneda),
-            fecha=INICIO + timedelta(seconds=rng.randint(0, dias * 86_400)),
-            comercio=f"merchant-{rng.randint(1, 9)}" if tipo == "QR" else None,
-        ))
+        ops.append(
+            Operacion(
+                id=f"tx-{i:05d}",
+                tipo=tipo,
+                canal=canal,
+                moneda=moneda,
+                monto=redondear(Decimal(str(rng.uniform(*MONTOS[moneda]))), moneda),
+                fecha=INICIO + timedelta(seconds=rng.randint(0, dias * 86_400)),
+                comercio=f"merchant-{rng.randint(1, 9)}" if tipo == "QR" else None,
+            )
+        )
     return sorted(ops, key=lambda o: (o.fecha, o.id))
 
 
@@ -65,7 +81,9 @@ def ultimas_versiones(archivos):
 def conciliar(ops, leidos):
     """Conciliación mínima por referencia y monto, para comprobar el reporte."""
     nuestras = {o.id: o for o in ops}
-    del_socio = {r.ref_pagoseguro: r for leido in leidos.values() for r in leido.registros}
+    del_socio = {
+        r.ref_pagoseguro: r for leido in leidos.values() for r in leido.registros
+    }
     diferencias = set()
     for ref, op in nuestras.items():
         if ref not in del_socio:
@@ -84,7 +102,15 @@ def conciliar(ops, leidos):
 def test_cada_formato_se_lee_de_vuelta(socio):
     ops = [o for o in operaciones(300) if socio.ve(o)][:20]
     registros = [
-        Registro(o.id, f"{socio.prefijo}{i:09d}", o.tipo, o.monto, o.moneda, o.fecha, o.comercio)
+        Registro(
+            o.id,
+            f"{socio.prefijo}{i:09d}",
+            o.tipo,
+            o.monto,
+            o.moneda,
+            o.fecha,
+            o.comercio,
+        )
         for i, o in enumerate(ops)
     ]
     extracto = Extracto(socio.nombre, socio.dia_de(ops[0].fecha), 1, registros)
@@ -93,7 +119,7 @@ def test_cada_formato_se_lee_de_vuelta(socio):
 
     assert leido.control == socio.control_real(registros)
     assert len(leido.registros) == len(registros)
-    for original, vuelta in zip(registros, leido.registros):
+    for original, vuelta in zip(registros, leido.registros, strict=True):
         assert vuelta.ref_pagoseguro == original.ref_pagoseguro
         assert vuelta.ref_socio == original.ref_socio
         assert vuelta.monto == original.monto
@@ -106,8 +132,13 @@ def test_cada_formato_se_lee_de_vuelta(socio):
 def test_ancho_fijo_tiene_largo_constante():
     socio = RedCorresponsales()
     ops = [o for o in operaciones(300) if socio.ve(o)][:10]
-    registros = [Registro(o.id, f"RC{i:09d}", o.tipo, o.monto, o.moneda, o.fecha) for i, o in enumerate(ops)]
-    texto = socio.escribir(Extracto(socio.nombre, socio.dia_de(ops[0].fecha), 1, registros))
+    registros = [
+        Registro(o.id, f"RC{i:09d}", o.tipo, o.monto, o.moneda, o.fecha)
+        for i, o in enumerate(ops)
+    ]
+    texto = socio.escribir(
+        Extracto(socio.nombre, socio.dia_de(ops[0].fecha), 1, registros)
+    )
     detalle = [linea for linea in texto.splitlines() if linea.startswith("D")]
     assert {len(linea) for linea in detalle} == {88}
 
@@ -121,7 +152,7 @@ def test_cada_operacion_tiene_un_solo_socio():
 
 def test_el_dia_es_el_de_la_zona_del_socio():
     # 03:00 UTC del 2 de octubre son las 22:00 del 1 de octubre en Bogotá.
-    fecha = datetime(2026, 10, 2, 3, 0, tzinfo=timezone.utc)
+    fecha = datetime(2026, 10, 2, 3, 0, tzinfo=UTC)
     assert BancoAndino().dia_de(fecha).isoformat() == "2026-10-02"
     assert RedCorresponsales().dia_de(fecha).isoformat() == "2026-10-01"
 
@@ -130,9 +161,19 @@ def test_el_dia_es_el_de_la_zona_del_socio():
 
 
 def _tx(id, tipo="RECARGA", canal="APP", monto="10.00", moneda="USD"):
-    return {"kind": "transaction", "endpoint": "/transactions", "body": {
-        "id": id, "type": tipo, "channel": canal, "amount": monto, "currency": moneda,
-        "merchant_id": None, "transaction_date": "2026-10-01T10:00:00+00:00"}}
+    return {
+        "kind": "transaction",
+        "endpoint": "/transactions",
+        "body": {
+            "id": id,
+            "type": tipo,
+            "channel": canal,
+            "amount": monto,
+            "currency": moneda,
+            "merchant_id": None,
+            "transaction_date": "2026-10-01T10:00:00+00:00",
+        },
+    }
 
 
 def _escribir_jsonl(ruta, filas):
@@ -142,18 +183,24 @@ def _escribir_jsonl(ruta, filas):
 def test_lee_solo_lo_que_ve_un_socio(tmp_path):
     carpeta = tmp_path / "instance-0"
     carpeta.mkdir()
-    _escribir_jsonl(carpeta / "events.jsonl", [
-        _tx("a"),
-        _tx("a"),  # reenvío del core: cuenta una vez
-        _tx("b", tipo="P2P"),  # interna: ningún socio la ve
-        _tx("c", monto="88.910"),  # decimales de más: mismo valor
-        _tx("d"),  # rechazada por el motor
-        {"kind": "security", "endpoint": "/security-events", "body": {"id": "s"}},
-    ])
-    _escribir_jsonl(carpeta / "labels.jsonl", [
-        {"id": "a", "response": {"status": 200, "decision": "APPROVE"}},
-        {"id": "d", "response": {"status": 200, "decision": "REJECT"}},
-    ])
+    _escribir_jsonl(
+        carpeta / "events.jsonl",
+        [
+            _tx("a"),
+            _tx("a"),  # reenvío del core: cuenta una vez
+            _tx("b", tipo="P2P"),  # interna: ningún socio la ve
+            _tx("c", monto="88.910"),  # decimales de más: mismo valor
+            _tx("d"),  # rechazada por el motor
+            {"kind": "security", "endpoint": "/security-events", "body": {"id": "s"}},
+        ],
+    )
+    _escribir_jsonl(
+        carpeta / "labels.jsonl",
+        [
+            {"id": "a", "response": {"status": 200, "decision": "APPROVE"}},
+            {"id": "d", "response": {"status": 200, "decision": "REJECT"}},
+        ],
+    )
 
     ops = leer(tmp_path)
 
@@ -199,8 +246,10 @@ def test_misma_semilla_mismos_archivos():
 def test_proporcion_de_defectos():
     ops = operaciones(n=5_000)
     g, _ = generar(ops, faltantes=4, extras=2, redondeo=6)
-    por_tipo = {t: sum(d["defect"] == t for d in g.defectos)
-                for t in ("MISSING_RECORD", "EXTRA_RECORD", "ROUNDED_AMOUNT")}
+    por_tipo = {
+        t: sum(d["defect"] == t for d in g.defectos)
+        for t in ("MISSING_RECORD", "EXTRA_RECORD", "ROUNDED_AMOUNT")
+    }
     assert 150 <= por_tipo["MISSING_RECORD"] <= 250  # ~200
     assert 60 <= por_tipo["EXTRA_RECORD"] <= 140  # ~100
     assert 220 <= por_tipo["ROUNDED_AMOUNT"] <= 380  # ~300 menos los que no cambian
@@ -208,11 +257,17 @@ def test_proporcion_de_defectos():
 
 def test_el_reporte_es_lo_que_encuentra_la_conciliacion():
     ops = operaciones()
-    g, archivos = generar(ops, faltantes=5, extras=3, redondeo=5, reenvio=30, control=10)
+    g, archivos = generar(
+        ops, faltantes=5, extras=3, redondeo=5, reenvio=30, control=10
+    )
 
     esperado = {(d["type"], d["reference"]) for d in g.diferencias}
     assert esperado == conciliar(ops, ultimas_versiones(archivos))
-    assert {t for t, _ in esperado} == {FALTANTE_EN_SOCIO, FALTANTE_EN_PAGOSEGURO, DIFERENCIA_MONTO}
+    assert {t for t, _ in esperado} == {
+        FALTANTE_EN_SOCIO,
+        FALTANTE_EN_PAGOSEGURO,
+        DIFERENCIA_MONTO,
+    }
 
 
 def test_montos_redondeados_pasan_la_tolerancia():
@@ -221,7 +276,10 @@ def test_montos_redondeados_pasan_la_tolerancia():
     montos = [d for d in g.diferencias if d["type"] == DIFERENCIA_MONTO]
     assert montos
     for d in montos:
-        assert abs(Decimal(d["pagoseguro_amount"]) - Decimal(d["partner_amount"])) > TOLERANCIA
+        assert (
+            abs(Decimal(d["pagoseguro_amount"]) - Decimal(d["partner_amount"]))
+            > TOLERANCIA
+        )
         assert Decimal(d["partner_amount"]) % 1 == 0
 
 
@@ -243,7 +301,9 @@ def test_control_que_no_cuadra():
     for socio, extracto in archivos:
         leido = socio.leer(socio.escribir(extracto))
         assert leido.control != socio.control_real(leido.registros)
-    assert len([d for d in g.defectos if d["defect"] == "BAD_CONTROL_TOTALS"]) == len(archivos)
+    assert len([d for d in g.defectos if d["defect"] == "BAD_CONTROL_TOTALS"]) == len(
+        archivos
+    )
 
 
 # --- Salida ------------------------------------------------------------------
@@ -277,5 +337,8 @@ def test_sube_a_la_capa_raw(monkeypatch):
         "qr_pagos/fecha=2026-10-01/qr_pagos_20261001_v1.txt", "#CTRL|2026-10-01|0|0\n"
     )
     assert subidos[0]["Bucket"] == "pagoseguro-datalake"
-    assert subidos[0]["Key"] == "raw/extractos/qr_pagos/fecha=2026-10-01/qr_pagos_20261001_v1.txt"
+    assert (
+        subidos[0]["Key"]
+        == "raw/extractos/qr_pagos/fecha=2026-10-01/qr_pagos_20261001_v1.txt"
+    )
     assert subidos[0]["ContentType"].startswith("text/plain")
