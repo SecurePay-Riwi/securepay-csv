@@ -37,7 +37,9 @@ class SalidaLocal:
 
     def reporte(self, datos: dict) -> Path:
         ruta = self.carpeta / "extracts_report.json"
-        ruta.write_text(json.dumps(datos, indent=2, ensure_ascii=False), encoding="utf-8")
+        ruta.write_text(
+            json.dumps(datos, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
         return ruta
 
 

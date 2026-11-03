@@ -62,18 +62,29 @@ class Generador:
         return f"{socio.prefijo}{self._refs[socio.nombre]:09d}"
 
     def _anotar(self, defecto, socio, dia, version, referencia, detalle):
-        self.defectos.append({
-            "defect": defecto, "partner": socio.nombre, "day": dia.isoformat(),
-            "version": version, "reference": referencia, "detail": detalle,
-        })
+        self.defectos.append(
+            {
+                "defect": defecto,
+                "partner": socio.nombre,
+                "day": dia.isoformat(),
+                "version": version,
+                "reference": referencia,
+                "detail": detalle,
+            }
+        )
 
     def _diferencia(self, tipo, socio, dia, referencia, moneda, nuestro, del_socio):
-        self.diferencias.append({
-            "type": tipo, "partner": socio.nombre, "day": dia.isoformat(),
-            "reference": referencia, "currency": moneda,
-            "pagoseguro_amount": None if nuestro is None else str(nuestro),
-            "partner_amount": None if del_socio is None else str(del_socio),
-        })
+        self.diferencias.append(
+            {
+                "type": tipo,
+                "partner": socio.nombre,
+                "day": dia.isoformat(),
+                "reference": referencia,
+                "currency": moneda,
+                "pagoseguro_amount": None if nuestro is None else str(nuestro),
+                "partner_amount": None if del_socio is None else str(del_socio),
+            }
+        )
 
     # --- Defectos por registro ----------------------------------------------
 
@@ -84,7 +95,9 @@ class Generador:
         Devuelve None si ni así cambia más que la tolerancia.
         """
         for unidad in (Decimal(1), Decimal(10)):
-            nuevo = (registro.monto / unidad).quantize(Decimal(1), ROUND_HALF_UP) * unidad
+            nuevo = (registro.monto / unidad).quantize(
+                Decimal(1), ROUND_HALF_UP
+            ) * unidad
             if nuevo > 0 and abs(nuevo - registro.monto) > TOLERANCIA:
                 return replace(registro, monto=nuevo.quantize(paso(registro.moneda)))
         return None
@@ -97,13 +110,17 @@ class Generador:
         fecha = base.fecha - timedelta(seconds=self.rng.randint(1, 600))
         if socio.dia_de(fecha) != dia:
             fecha = base.fecha
-        return replace(base, ref_pagoseguro=ref, ref_socio=self._ref_socio(socio), fecha=fecha)
+        return replace(
+            base, ref_pagoseguro=ref, ref_socio=self._ref_socio(socio), fecha=fecha
+        )
 
     def _control(self, socio, registros):
         """Control que no cuadra: cambia la cantidad o el total."""
         cantidad, total = socio.control_real(registros)
         if self.rng.random() < 0.5:
-            cantidad = cantidad + 1 if cantidad == 0 else cantidad + self.rng.choice((-1, 1))
+            cantidad = (
+                cantidad + 1 if cantidad == 0 else cantidad + self.rng.choice((-1, 1))
+            )
         else:
             total += Decimal(self.rng.randint(100, 99_999))
         return cantidad, total
@@ -135,8 +152,13 @@ class Generador:
     def _dia(self, socio, dia, operaciones):
         correctos = [
             Registro(
-                ref_pagoseguro=op.id, ref_socio=self._ref_socio(socio), tipo=op.tipo,
-                monto=op.monto, moneda=op.moneda, fecha=op.fecha, comercio=op.comercio,
+                ref_pagoseguro=op.id,
+                ref_socio=self._ref_socio(socio),
+                tipo=op.tipo,
+                monto=op.monto,
+                moneda=op.moneda,
+                fecha=op.fecha,
+                comercio=op.comercio,
             )
             for op in operaciones
         ]
@@ -145,15 +167,27 @@ class Generador:
         for r in correctos:
             if self._toca(self.pct.faltantes):
                 faltantes.append(r)
-                self._anotar("MISSING_RECORD", socio, dia, 1, r.ref_pagoseguro,
-                             "el socio no reporta la operación")
+                self._anotar(
+                    "MISSING_RECORD",
+                    socio,
+                    dia,
+                    1,
+                    r.ref_pagoseguro,
+                    "el socio no reporta la operación",
+                )
                 continue
             if self._toca(self.pct.redondeo):
                 nuevo = self.redondeado(r)
                 if nuevo:
                     redondeados[r.ref_pagoseguro] = (r, nuevo)
-                    self._anotar("ROUNDED_AMOUNT", socio, dia, 1, r.ref_pagoseguro,
-                                 f"{r.monto} -> {nuevo.monto} {r.moneda}")
+                    self._anotar(
+                        "ROUNDED_AMOUNT",
+                        socio,
+                        dia,
+                        1,
+                        r.ref_pagoseguro,
+                        f"{r.monto} -> {nuevo.monto} {r.moneda}",
+                    )
                     v1.append(nuevo)
                     continue
             v1.append(r)
@@ -163,8 +197,14 @@ class Generador:
             if self._toca(self.pct.extras):
                 extra = self._extra(socio, r, dia, len(extras))
                 extras.append(extra)
-                self._anotar("EXTRA_RECORD", socio, dia, 1, extra.ref_pagoseguro,
-                             "operación que PagoSeguro no tiene")
+                self._anotar(
+                    "EXTRA_RECORD",
+                    socio,
+                    dia,
+                    1,
+                    extra.ref_pagoseguro,
+                    "operación que PagoSeguro no tiene",
+                )
 
         por_fecha = lambda rs: sorted(rs, key=lambda r: (r.fecha, r.ref_socio))  # noqa: E731
         versiones = [por_fecha(v1 + extras)]
@@ -174,8 +214,9 @@ class Generador:
         if corregido:
             versiones.append(por_fecha(correctos + extras))
             for d in self.defectos:
-                if (d["partner"], d["day"]) == (socio.nombre, dia.isoformat()) and \
-                        d["defect"] in ("MISSING_RECORD", "ROUNDED_AMOUNT"):
+                if (d["partner"], d["day"]) == (socio.nombre, dia.isoformat()) and d[
+                    "defect"
+                ] in ("MISSING_RECORD", "ROUNDED_AMOUNT"):
                     d["corrected_in_v2"] = True
 
         resultado = []
@@ -184,20 +225,47 @@ class Generador:
             if self._toca(self.pct.control):
                 extracto.control = self._control(socio, registros)
                 real = socio.control_real(registros)
-                self._anotar("BAD_CONTROL_TOTALS", socio, dia, numero, None,
-                             f"declara {extracto.control[0]} registros y total "
-                             f"{extracto.control[1]}; el detalle tiene {real[0]} y {real[1]}")
+                self._anotar(
+                    "BAD_CONTROL_TOTALS",
+                    socio,
+                    dia,
+                    numero,
+                    None,
+                    f"declara {extracto.control[0]} registros y total "
+                    f"{extracto.control[1]}; el detalle tiene {real[0]} y {real[1]}",
+                )
             resultado.append((socio, extracto))
 
         # Lo que la conciliación debe encontrar, contra la última versión.
         if not corregido:
             for r in faltantes:
-                self._diferencia(FALTANTE_EN_SOCIO, socio, dia, r.ref_pagoseguro,
-                                 r.moneda, r.monto, None)
+                self._diferencia(
+                    FALTANTE_EN_SOCIO,
+                    socio,
+                    dia,
+                    r.ref_pagoseguro,
+                    r.moneda,
+                    r.monto,
+                    None,
+                )
             for original, nuevo in redondeados.values():
-                self._diferencia(DIFERENCIA_MONTO, socio, dia, original.ref_pagoseguro,
-                                 original.moneda, original.monto, nuevo.monto)
+                self._diferencia(
+                    DIFERENCIA_MONTO,
+                    socio,
+                    dia,
+                    original.ref_pagoseguro,
+                    original.moneda,
+                    original.monto,
+                    nuevo.monto,
+                )
         for r in extras:
-            self._diferencia(FALTANTE_EN_PAGOSEGURO, socio, dia, r.ref_pagoseguro,
-                             r.moneda, None, r.monto)
+            self._diferencia(
+                FALTANTE_EN_PAGOSEGURO,
+                socio,
+                dia,
+                r.ref_pagoseguro,
+                r.moneda,
+                None,
+                r.monto,
+            )
         return resultado

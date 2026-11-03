@@ -14,8 +14,8 @@ from uuid import uuid4
 
 import pytest
 from botocore.exceptions import ClientError
-
 from securepay_shared.aws import get_client
+
 from securepay_csv.kaggle_datasets import config
 from securepay_csv.kaggle_datasets.download import asegurar_descargado
 from securepay_csv.kaggle_datasets.upload import (
@@ -376,12 +376,19 @@ def test_upload_and_idempotency_against_localstack(tmp_path, s3_localstack):
 
         llaves = [
             o["Key"]
-            for o in s3_localstack.list_objects_v2(Bucket=bucket, Prefix=base)["Contents"]
+            for o in s3_localstack.list_objects_v2(Bucket=bucket, Prefix=base)[
+                "Contents"
+            ]
         ]
         assert sorted(llaves) == [f"{base}/_manifest.json", f"{base}/prueba.csv"]
 
-        cuerpo = s3_localstack.get_object(Bucket=bucket, Key=ds.clave_manifiesto)["Body"].read()
-        assert json.loads(cuerpo)["sha256"] == hashlib.sha256(ruta.read_bytes()).hexdigest()
+        cuerpo = s3_localstack.get_object(Bucket=bucket, Key=ds.clave_manifiesto)[
+            "Body"
+        ].read()
+        assert (
+            json.loads(cuerpo)["sha256"]
+            == hashlib.sha256(ruta.read_bytes()).hexdigest()
+        )
     finally:
         for llave in (ds.clave_s3, ds.clave_manifiesto):
             s3_localstack.delete_object(Bucket=bucket, Key=llave)

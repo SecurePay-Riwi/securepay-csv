@@ -29,7 +29,7 @@ pruebas y lo usará la ingesta de extractos.
 import csv
 import io
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from securepay_csv.partner_statements.money import paso
@@ -90,7 +90,7 @@ class Socio:
     nombre = ""
     prefijo = ""  # de su referencia propia
     extension = "csv"
-    zona = timezone.utc
+    zona = UTC
 
     def ve(self, op) -> bool:
         raise NotImplementedError
@@ -119,9 +119,15 @@ class BancoAndino(Socio):
     nombre = "banco_andino"
     prefijo = "BA"
     extension = "csv"
-    zona = timezone.utc
-    COLUMNAS = ["fecha_hora_utc", "referencia_banco", "referencia_pagoseguro",
-                "tipo", "moneda", "monto"]
+    zona = UTC
+    COLUMNAS = [
+        "fecha_hora_utc",
+        "referencia_banco",
+        "referencia_pagoseguro",
+        "tipo",
+        "moneda",
+        "monto",
+    ]
 
     def ve(self, op):
         return op.tipo == "RECARGA" and op.canal in ("APP", "WEB")
@@ -131,10 +137,16 @@ class BancoAndino(Socio):
         w = csv.writer(salida, lineterminator="\n")
         w.writerow(self.COLUMNAS)
         for r in extracto.registros:
-            w.writerow([
-                r.fecha.astimezone(self.zona).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                r.ref_socio, r.ref_pagoseguro, r.tipo, r.moneda, f"{r.monto}",
-            ])
+            w.writerow(
+                [
+                    r.fecha.astimezone(self.zona).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    r.ref_socio,
+                    r.ref_pagoseguro,
+                    r.tipo,
+                    r.moneda,
+                    f"{r.monto}",
+                ]
+            )
         cantidad, total = extracto.control or self.control_real(extracto.registros)
         w.writerow(["TOTAL", cantidad, f"{total}"])
         return salida.getvalue()
@@ -144,9 +156,12 @@ class BancoAndino(Socio):
         cuerpo, control = filas[1:-1], filas[-1]
         registros = [
             Registro(
-                ref_pagoseguro=f[2], ref_socio=f[1], tipo=f[3], moneda=f[4],
+                ref_pagoseguro=f[2],
+                ref_socio=f[1],
+                tipo=f[3],
+                moneda=f[4],
                 monto=Decimal(f[5]),
-                fecha=datetime.strptime(f[0], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc),
+                fecha=datetime.strptime(f[0], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC),
             )
             for f in cuerpo
         ]
@@ -198,18 +213,25 @@ class RedCorresponsales(Socio):
         registros, control, encabezado = [], None, {}
         for linea in texto.splitlines():
             if linea.startswith("H"):
-                encabezado = {"socio": linea[1:21].strip(), "dia": linea[21:29],
-                              "version": int(linea[29:31])}
+                encabezado = {
+                    "socio": linea[1:21].strip(),
+                    "dia": linea[21:29],
+                    "version": int(linea[29:31]),
+                }
             elif linea.startswith("D"):
                 moneda = linea[70:73].strip()
-                registros.append(Registro(
-                    fecha=datetime.strptime(linea[1:15], "%Y%m%d%H%M%S").replace(tzinfo=self.zona),
-                    ref_socio=linea[15:27].strip(),
-                    ref_pagoseguro=linea[27:63].strip(),
-                    tipo=linea[63:70].strip(),
-                    moneda=moneda,
-                    monto=de_unidades(int(linea[73:88]), moneda),
-                ))
+                registros.append(
+                    Registro(
+                        fecha=datetime.strptime(linea[1:15], "%Y%m%d%H%M%S").replace(
+                            tzinfo=self.zona
+                        ),
+                        ref_socio=linea[15:27].strip(),
+                        ref_pagoseguro=linea[27:63].strip(),
+                        tipo=linea[63:70].strip(),
+                        moneda=moneda,
+                        monto=de_unidades(int(linea[73:88]), moneda),
+                    )
+                )
             elif linea.startswith("T"):
                 control = (int(linea[1:9]), Decimal(int(linea[9:27])))
         return Leido(registros, control, encabezado)
@@ -242,8 +264,16 @@ class CajerosExpress(Socio):
         w.writerow(self.COLUMNAS)
         for r in extracto.registros:
             local = r.fecha.astimezone(self.zona)
-            w.writerow([f"{local:%d/%m/%Y}", f"{local:%H:%M:%S}", r.ref_socio,
-                        r.ref_pagoseguro, r.moneda, self._coma(r.monto)])
+            w.writerow(
+                [
+                    f"{local:%d/%m/%Y}",
+                    f"{local:%H:%M:%S}",
+                    r.ref_socio,
+                    r.ref_pagoseguro,
+                    r.moneda,
+                    self._coma(r.monto),
+                ]
+            )
         cantidad, total = extracto.control or self.control_real(extracto.registros)
         w.writerow(["CONTROL", cantidad, self._coma(total)])
         return salida.getvalue()
@@ -253,13 +283,20 @@ class CajerosExpress(Socio):
         cuerpo, control = filas[1:-1], filas[-1]
         registros = [
             Registro(
-                fecha=datetime.strptime(f"{f[0]} {f[1]}", "%d/%m/%Y %H:%M:%S").replace(tzinfo=self.zona),
-                ref_socio=f[2], ref_pagoseguro=f[3], tipo="RETIRO", moneda=f[4],
+                fecha=datetime.strptime(f"{f[0]} {f[1]}", "%d/%m/%Y %H:%M:%S").replace(
+                    tzinfo=self.zona
+                ),
+                ref_socio=f[2],
+                ref_pagoseguro=f[3],
+                tipo="RETIRO",
+                moneda=f[4],
                 monto=Decimal(f[5].replace(",", ".")),
             )
             for f in cuerpo
         ]
-        return Leido(registros, (int(control[1]), Decimal(control[2].replace(",", "."))))
+        return Leido(
+            registros, (int(control[1]), Decimal(control[2].replace(",", ".")))
+        )
 
 
 class QrPagos(Socio):
@@ -273,7 +310,7 @@ class QrPagos(Socio):
     nombre = "qr_pagos"
     prefijo = "QR"
     extension = "txt"
-    zona = timezone.utc
+    zona = UTC
 
     def ve(self, op):
         return op.tipo == "QR"
@@ -283,14 +320,23 @@ class QrPagos(Socio):
 
     def escribir(self, extracto):
         cantidad, total = extracto.control or self.control_real(extracto.registros)
-        lineas = [f"#CTRL|{extracto.dia:%Y-%m-%d}|{cantidad}|{int(total)}",
-                  "ref_qr|ref_pagoseguro|comercio|moneda|monto_minimo|fecha"]
+        lineas = [
+            f"#CTRL|{extracto.dia:%Y-%m-%d}|{cantidad}|{int(total)}",
+            "ref_qr|ref_pagoseguro|comercio|moneda|monto_minimo|fecha",
+        ]
         for r in extracto.registros:
-            lineas.append("|".join([
-                r.ref_socio, r.ref_pagoseguro, r.comercio or "", r.moneda,
-                str(a_unidades(r.monto, r.moneda)),
-                f"{r.fecha.astimezone(self.zona):%Y-%m-%d %H:%M:%S}",
-            ]))
+            lineas.append(
+                "|".join(
+                    [
+                        r.ref_socio,
+                        r.ref_pagoseguro,
+                        r.comercio or "",
+                        r.moneda,
+                        str(a_unidades(r.monto, r.moneda)),
+                        f"{r.fecha.astimezone(self.zona):%Y-%m-%d %H:%M:%S}",
+                    ]
+                )
+            )
         return "\n".join(lineas) + "\n"
 
     def leer(self, texto):
@@ -299,11 +345,19 @@ class QrPagos(Socio):
         registros = []
         for linea in lineas[2:]:
             ref_qr, ref_ps, comercio, moneda, unidades, fecha = linea.split("|")
-            registros.append(Registro(
-                ref_pagoseguro=ref_ps, ref_socio=ref_qr, tipo="QR", moneda=moneda,
-                monto=de_unidades(int(unidades), moneda), comercio=comercio or None,
-                fecha=datetime.strptime(fecha, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc),
-            ))
+            registros.append(
+                Registro(
+                    ref_pagoseguro=ref_ps,
+                    ref_socio=ref_qr,
+                    tipo="QR",
+                    moneda=moneda,
+                    monto=de_unidades(int(unidades), moneda),
+                    comercio=comercio or None,
+                    fecha=datetime.strptime(fecha, "%Y-%m-%d %H:%M:%S").replace(
+                        tzinfo=UTC
+                    ),
+                )
+            )
         return Leido(registros, (int(cantidad), Decimal(total)), {"dia": dia})
 
 
@@ -316,4 +370,3 @@ def socio_de(op):
         if socio.ve(op):
             return socio
     return None
-
